@@ -15,3 +15,11 @@ for item in data:
 # Create keyboard
 keyboard = InlineKeyboardMarkup(row_width=1)
 print(keyboard.add(*buttons))
+
+
+#  # Здесь мы создаём БД
+#     def create_db(self):
+#         self.cur.execute(
+#             """CREATE DATABASE mbti"""
+#         )
+#         return True

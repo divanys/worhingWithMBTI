@@ -1,9 +1,12 @@
-from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+import json
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-but1 = KeyboardButton('/start')
-but2 = KeyboardButton('/second')
-but3 = KeyboardButton('/key3')
+with open('worhingWithMBTI/QandA/questions.json', 'r') as file:
+    questions = json.load(file)
 
 kb_client = ReplyKeyboardMarkup(resize_keyboard=True)
-
-kb_client.add(but1).insert(but2).add(but3)
+for question in questions:
+    q = question['question']
+    a1 = question['answer'][0]
+    a2 = question['answer'][1]
+    kb_client.add(KeyboardButton(a1), KeyboardButton(a2))
