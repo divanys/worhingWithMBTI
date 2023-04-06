@@ -1,2 +1,3 @@
 bot/configure.py
 db/configure.py
+*.cpython-311.pyc
