@@ -4,7 +4,7 @@ import re
 Из текстового файла достаю вопросы и ответы, деля их на а) и б)
 '''
 
-with open('worhingWithMBTI/QandA/data.txt', 'r') as f:
+with open('./QandA/data.txt', 'r') as f:
     text = f.read()
 
 

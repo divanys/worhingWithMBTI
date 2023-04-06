@@ -1,25 +1,20 @@
 import json
-
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
-# Load JSON data
-with open('worhingWithMBTI/testik/data.json', 'r') as f:
-    data = json.load(f)
-
-# Create buttons
-buttons = []
-for item in data:
-    button = InlineKeyboardButton(text=item['answer'])
-    buttons.append(button)
-
-# Create keyboard
-keyboard = InlineKeyboardMarkup(row_width=1)
-print(keyboard.add(*buttons))
+import asyncio
 
 
-#  # Здесь мы создаём БД
-#     def create_db(self):
-#         self.cur.execute(
-#             """CREATE DATABASE mbti"""
-#         )
-#         return True
+with open('./QandA/questions.json', 'r') as file:
+    questions = json.load(file)
+
+print(len(questions))
+
+
+async def some_async_generator():
+    for i in range(len(questions)):
+        yield i
+
+async def sim():
+    async for i in some_async_generator():
+        q = questions[i]['question']
+        print(q)
+
+asyncio.run(sim())
