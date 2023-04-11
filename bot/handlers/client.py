@@ -2,71 +2,95 @@ from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
 import json
 from aiogram.dispatcher.filters.state import State, StatesGroup
-
+import aiogram 
 from configure import CREATOR_CHAT_ID
 from create_bot import dp, bot 
 from keyboards import kb_client
 
 async def command_start(message : types.Message):
     try:
-        await bot.send_message(message.from_user.id, 'Hello 👋\n'
-                        'I`m a bot that allows you to take the test MBTI.\n'
-                        'Send me the /test and let`s start taking it!\n'
-                        'Or send me the /help command if you have a problem or forgot the commands.')
+        await bot.send_message(message.from_user.id, 'Привет 👋\n'
+                        'Я бот, который предоставляет возможность вам пройти тест MBTI.\n'
+                        'Пришлите мне /test, и давайте начнем проходить тест прямо сейчас!\n'
+                        'Или пришлите мне команду /help, если у вас возникла проблема или вы забыли команды.')
     except:
         await message.reply('Общайтесь в ЛС:\n'
                             't.me/Myers_Briggs_Typology_bot')
-
-
-# Отправляем сообщение создателю бота
-async def command_problem(message: types.Message, state: FSMContext):
-    await bot.send_message(message.from_user.id, 'Опиши свою проблему, а я оправлю запрос создателю, в ближайшее время он с тобой свяжется.')
-    await state.set_state("problem")
-
-async def problem_state(message: types.Message, state: FSMContext):
-    user_id = message.from_user.id
-    await bot.send_message(chat_id=CREATOR_CHAT_ID, text=f"Пользователь {user_id} написал:\n{message.text}")
-    await state.finish()
 
 
 async def help_message(message: types.Message):
     await message.reply("Перечень команд для твоей помощи:\n"
                         "   /start - Начало бота. Приветствие. \n"
                         "   /help - помощь по командам. \n"
-                        "   /problem - написать о проблеме создателю.")
+                        "   /problem - написать о проблеме создателю.\n"
+                        "   /test - начало тестирования.")
     
-class Test(StatesGroup):
-
-    for i in range(0, 70):
-        exec(f"q{i} = State()")
-
-with open('./QandA/questions.json', 'r') as f:
+with open("./QandA/questions.json", "r") as f:
     questions = json.load(f)
 
-async def cmd_start(message: types.Message):
-    """
-    Conversation's entry point
-    """
-    # Set state
-    await Test.q0.set()
+question_index = 0
 
-    keyboard_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard_markup.add("Да", "Нет")
-
-    await message.answer("Пройдем тест MBTI? (Да/Нет)", reply_markup=keyboard_markup)
+class Test(StatesGroup):
+    ready = State() # waiting for user's readiness
+    question = State() # waiting for user's answer
 
 
+async def test(message: aiogram.types.Message):
+    await message.answer("Вы готовы пройти тест? Ответьте \"да\" или \"нет\".\nЕсли в процессе теста вы захотите его прекратить, отправьте \"стоп\".")
+    await Test.ready.set()
 
-for i in range(0, 70):
-    exec(f"async def answer_q{i}(message: types.Message, state: FSMContext):\n    async with state.proxy() as data:\n        data['q{i}'] = message.text\n        keyboard_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)\n        keyboard_markup.add(questions[{i}]['answer'][0], questions[{i}]['answer'][1])\n\n        if i == 70:\n            await Test.next()\n            await state.finish()\n            await message.answer('Спасибо за прохождение теста!')\n        else:\n            await Test.next()\n            await message.answer(f'Вопрос №{i + 1}: {questions[i]['question']}', reply_markup=keyboard_markup)")
 
+async def ready(message: aiogram.types.Message, state: FSMContext):
+    if message.text.lower() == "да" or message.text.lower() == "yes":
+        question = questions[question_index]
+        keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
+
+        for answer in range(len(question["answer"])):
+            keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
+
+        await message.answer("Вопрос №1:")
+        await message.answer(question["question"], reply_markup=keyboard)
+        await Test.question.set()
+
+    elif message.text.lower() == "нет" or message.text.lower() == "no":
+        await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
+        await state.finish()
+    else:
+        await message.answer("Пожалуйста, ответьте \"да\" или \"нет\".")
+
+
+async def question(message: aiogram.types.Message, state: FSMContext):
+    if message.text in [answer for question in questions for answer in question["answer"]]:
+        global question_index
+        question_index += 1
+        await message.answer(text = "Вопрос №" + str(question_index + 1) + ":")
+
+        # Проверяем, есть ли еще вопросы в списке
+        if question_index < len(questions):
+            # Получаем следующий вопрос из списка по индексу
+            question = questions[question_index]
+
+            keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            for answer in range(len(question["answer"])):
+                keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
+
+            await message.answer(question["question"], reply_markup=keyboard)
+            await Test.question.set()
+
+        else:
+            await message.answer("Тест закончен! Спасибо за участие!", reply_markup=aiogram.types.ReplyKeyboardRemove())
+            await state.finish()
+
+    elif message.text.lower() == "stop" or message.text.lower() == "стоп" or message.text.lower() == "прекратить" or message.text.lower() == "end":
+            await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
+            await state.finish()
+    else:
+        await message.answer("Пожалуйста, выберите один из вариантов ответа на клавиатуре.")
 
 
 def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(command_start, commands=['start', 'начать', 'старт', 'начнём'])
-    dp.register_message_handler(command_problem, commands=['problem', 'проблема'])
     dp.register_message_handler(help_message, commands=['help', 'помощь'])
-    dp.register_message_handler(problem_state, state="problem")
-    dp.register_message_handler(cmd_start, commands=['test', 'тест'])
-    for i in range(0, 70):
-        exec(f"dp.register_message_handler(answer_q{i}, state=Test.q{i})")
+    dp.register_message_handler(test, commands=['test', 'тест'], state=None)
+    dp.register_message_handler(ready, state = "ready")
+    dp.register_message_handler(question, state="question")
