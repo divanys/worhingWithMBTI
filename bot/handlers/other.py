@@ -1,5 +1,4 @@
 from aiogram import types, Dispatcher
-from create_bot import dp 
 
 async def hello_in_other(message: types.Message):
     await message.reply('other')    

@@ -3,15 +3,13 @@ from aiogram.dispatcher import FSMContext
 import json
 from aiogram.dispatcher.filters.state import State, StatesGroup
 import aiogram 
-from configure import CREATOR_CHAT_ID
-from create_bot import dp, bot 
-from keyboards import kb_client
+from create_bot import bot 
 
 async def command_start(message : types.Message):
     try:
         await bot.send_message(message.from_user.id, 'Привет 👋\n'
-                        'Я бот, который предоставляет возможность вам пройти тест MBTI.\n'
-                        'Пришлите мне /test, и давайте начнем проходить тест прямо сейчас!\n'
+                        'Я бот, который позволяет вам пройти тест MBTI.\n'
+                        'Пришлите мне /тест, и начнем проходить тест прямо сейчас!\n'
                         'Или пришлите мне команду /help, если у вас возникла проблема или вы забыли команды.')
     except:
         await message.reply('Общайтесь в ЛС:\n'
@@ -38,7 +36,6 @@ class Test(StatesGroup):
 async def test(message: aiogram.types.Message):
     await message.answer("Вы готовы пройти тест? Ответьте \"да\" или \"нет\".\nЕсли в процессе теста вы захотите его прекратить, отправьте \"стоп\".")
     await Test.ready.set()
-
 
 async def ready(message: aiogram.types.Message, state: FSMContext):
     if message.text.lower() == "да" or message.text.lower() == "yes":
@@ -92,5 +89,5 @@ def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(command_start, commands=['start', 'начать', 'старт', 'начнём'])
     dp.register_message_handler(help_message, commands=['help', 'помощь'])
     dp.register_message_handler(test, commands=['test', 'тест'], state=None)
-    dp.register_message_handler(ready, state = "ready")
-    dp.register_message_handler(question, state="question")
+    dp.register_message_handler(ready, state = Test.ready)
+    dp.register_message_handler(question, state = Test.question)

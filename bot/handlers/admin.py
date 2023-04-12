@@ -1,10 +1,10 @@
 from aiogram import Dispatcher, types
 from aiogram.dispatcher import FSMContext
-import json
 from aiogram.dispatcher.filters.state import State, StatesGroup
-import aiogram 
+
+
 from configure import CREATOR_CHAT_ID
-from create_bot import dp, bot 
+from create_bot import  bot 
 
 
 
