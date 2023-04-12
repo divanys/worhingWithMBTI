@@ -27,7 +27,7 @@ def who_are_you(results):
         s_n_max = results[1::7].count(0) + results[2::7].count(0)
         personality_type += "N"
 
-    sn = (s_n_max - 10)
+    sn = (s_n_max - 10) * 2
 
     if (results[3::7].count(1) + results[4::7].count(1)) > (results[3::7].count(0) + results[4::7].count(0)):
         t_f_max = results[3::7].count(1) + results[4::7].count(1)
@@ -36,7 +36,7 @@ def who_are_you(results):
         t_f_max =  results[3::7].count(0) + results[4::7].count(0)
         personality_type += "F"
 
-    tf = (t_f_max - 10) 
+    tf = (t_f_max - 10) * 2
 
     if (results[5::7].count(1) + results[6::7].count(1)) > (results[5::7].count(0) + results[6::7].count(0)):
         j_p_max = results[5::7].count(1) + results[6::7].count(1)
@@ -45,8 +45,8 @@ def who_are_you(results):
         j_p_max = results[5::7].count(0) + results[6::7].count(0)
         personality_type += "P"
 
-    jp = (j_p_max - 10)
+    jp = (j_p_max - 10) * 2
 
     return (personality_type, ei + sn + tf + jp)
-print(results1)
-print(who_are_you(results1))
+# print(results1)
+# print(who_are_you(results1))
