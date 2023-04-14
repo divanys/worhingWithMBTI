@@ -4,6 +4,7 @@ import json
 from aiogram.dispatcher.filters.state import State, StatesGroup
 import aiogram 
 import asyncio
+import re
 
 from WhoAreYou import who_are_you
 from create_bot import bot 
@@ -15,6 +16,8 @@ async def command_start(message : types.Message):
                         'Я бот, который позволяет вам пройти тест MBTI.\n'
                         'Пришлите мне /test, и начнем проходить тест прямо сейчас!\n'
                         'Или пришлите мне команду /help, если у вас возникла проблема или вы забыли команды.')
+        await asyncio.sleep(0.2)
+        
     except:
         await message.reply('Общайтесь в ЛС:\n'
                             't.me/Myers_Briggs_Typology_bot')
@@ -26,8 +29,9 @@ async def help_message(message: types.Message):
                         "   /help - помощь по командам. \n"
                         "   /problem - написать о проблеме создателю.\n"
                         "   /test - начало тестирования.")
-    
-with open("/home/divan/гетБрейнсИТолькоУдалиЯТебzУдалюСЛицаЗемли/forJobasyncpython/workingWithMBTI/QandA/questions.json", "r") as f:
+    await asyncio.sleep(0.2)
+
+with open("./QandA/questions.json", "r") as f:
     questions = json.load(f)
 
 question_index = 0
@@ -40,9 +44,10 @@ class Test(StatesGroup):
 async def test(message: aiogram.types.Message):
     await message.answer("Вы готовы пройти тест? Ответьте \"да\" или \"нет\".\nЕсли в процессе теста вы захотите его прекратить, отправьте \"стоп\".")
     await Test.ready.set()
+    await asyncio.sleep(0.2)
+
 
 async def ready(message: aiogram.types.Message, state: FSMContext):
-
     if message.text.lower() == "да" or message.text.lower() == "yes":
         question = questions[question_index]
         keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -60,7 +65,7 @@ async def ready(message: aiogram.types.Message, state: FSMContext):
 
     else:
         await message.answer("Пожалуйста, ответьте \"да\" или \"нет\".")
-
+    await asyncio.sleep(0.2)
 class Date(StatesGroup):
     surname = State()
     name = State()
@@ -68,6 +73,8 @@ class Date(StatesGroup):
     registered = State()
 
 lst_data_user = []
+with open("./QandA/personalType.json", "r") as f:
+    personal_type = json.load(f)
 
 
 async def question(message: aiogram.types.Message, state: FSMContext):
@@ -102,12 +109,16 @@ async def question(message: aiogram.types.Message, state: FSMContext):
 
             await state.finish()
 
-            await message.answer("Результаты вашего теста:\n" + str(who_are_you(result_test)) + "\nПожалуйста, введите свою фамилию.")
+            await message.answer("Краткие результаты вашего теста:\n"
+                                 "Ваш тип личности: " + str(who_are_you(result_test)[0][0]) +
+                                 "; \nяркость выражения вашего типа: " + str(who_are_you(result_test)[0][1]) + "/70.\n" +
+                                 "Для получения полного результата теста, вам необходимо зарегистрироваться.\nПожалуйста, введите свою фамилию.")
             await Date.surname.set()
             lst_data_user.append(who_are_you(result_test)[0][0])
             lst_data_user.append(who_are_you(result_test)[0][1])
             question_index = 0
             result_test_text.clear()
+        await asyncio.sleep(0.2)
 
     elif message.text.lower() == "stop" or message.text.lower() == "стоп" or message.text.lower() == "прекратить" or message.text.lower() == "end":
             await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
@@ -118,6 +129,7 @@ async def question(message: aiogram.types.Message, state: FSMContext):
             
     else:
         await message.answer("Пожалуйста, выберите один из вариантов ответа на клавиатуре.")
+    await asyncio.sleep(0.2)
 
 
 
@@ -125,35 +137,62 @@ async def send_surname(message: aiogram.types.Message):
     lst_data_user.append(message.text)
     await Date.name.set()
     await message.answer("Отправьте своё имя.")
+    await asyncio.sleep(0.2)
 
 async def send_name(message: aiogram.types.Message, state: FSMContext):
     lst_data_user.append(message.text)
     await Date.email.set()
     await message.answer("А теперь отправьте свою почту.")
+    await asyncio.sleep(0.2)
 
 db = createDB.Database()
 db.create_table_user()
 db.create_table_results()
 
-with open("/home/divan/гетБрейнсИТолькоУдалиЯТебzУдалюСЛицаЗемли/forJobasyncpython/workingWithMBTI/QandA/personalType.json", "r") as f:
-    personal_type = json.load(f)
 
-async def send_email(message: aiogram.types.Message, state: FSMContext):
-    lst_data_user.append(message.text)
-    print(lst_data_user)
-    if db.check_user_exists(message.from_user.id):
-        await message.answer("Пользователь уже зарегистрирован.\nЖелаете изменить свои данные?")
-        await Date.registered.set()
+
+def check_email(text):
+    # Паттерн для проверки адреса электронной почты
+    pattern = r"[a-zA-Z0-9._%±]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    match = re.search(pattern, text)
+    # Если найдено совпадение, то это адрес электронной почты
+    if match:
+        return True
     else:
-        await message.answer("Спасибо за предоставленные данные!")
-        await state.finish()
-        db.insert_user(*lst_data_user)
-        db.insert_results(abbreviation=who_are_you(result_test)[0][0], personality_type=personal_type[f"{who_are_you(result_test)[0][0]}"],
-                          e_i=who_are_you(result_test)[1][0], s_n=who_are_you(result_test)[1][1],
-                          t_f=who_are_you(result_test)[1][2], j_p=who_are_you(result_test)[1][3],
-                          total=who_are_you(result_test)[0][1], id_user=message.from_user.id)
-        lst_data_user.clear()
-        result_test.clear()
+        return False
+    
+async def send_email(message: aiogram.types.Message, state: FSMContext):
+    if not check_email(message.text):
+        await message.answer("Адрес электронной почты не найден!\nПожалуйста, введите действительный адрес!")
+        await asyncio.sleep(0.2)
+
+    else:
+        lst_data_user.append(message.text)
+        if db.check_user_exists(message.from_user.id):
+            await message.answer("Пользователь уже зарегистрирован.\nЖелаете изменить свои данные?\nОтветьте \"да\" или \"нет\"")
+            await Date.registered.set()
+        else:
+            res = who_are_you(result_test)
+            db.insert_user(*lst_data_user)
+            db.insert_results(abbreviation=res[0][0], personality_type=personal_type[f"{res[0][0]}"],
+                            e_i=res[1][0], s_n=res[1][1],
+                            t_f=res[1][2], j_p=res[1][3],
+                            total=res[0][1], id_user=message.from_user.id)
+            lst_data_user.clear()
+            result_test.clear()
+            await asyncio.sleep(0.2)
+            await message.answer("Спасибо за предоставленные данные!")
+            await message.answer(f"Ваш тип личности - это {db.select_results(message.from_user.id)[-1][1]}.\n"
+                                 f"По шкале E-I вы набрали баллов: {db.select_results(message.from_user.id)[-1][2]}\n"
+                                 f"По шкале S-N вы набрали баллов: {db.select_results(message.from_user.id)[-1][3]}\n"
+                                 f"По шкале T-F вы набрали баллов: {db.select_results(message.from_user.id)[-1][4]}\n"
+                                 f"По шкале J-P вы набрали баллов: {db.select_results(message.from_user.id)[-1][5]}\n"
+                                 "Сейчас я пришлю файл с более подробной информацией о вашем типе личности!.."
+                                 )
+            with open(f"./Keirsi/{db.select_results(message.from_user.id)[-1][0]}.pdf", 'rb') as file:
+                await bot.send_document(message.from_user.id, file)
+            await state.finish()
+            
 
 
 async def send_registered(message: aiogram.types.Message, state: FSMContext):
@@ -166,12 +205,28 @@ async def send_registered(message: aiogram.types.Message, state: FSMContext):
         lst_data_user.clear()
         result_test.clear()
         await message.answer(f"Данные пользователя с id {message.from_user.id} обновлены!")
+        await message.answer(f"Ваш тип личности - это {db.select_results(message.from_user.id)[-1][1]}.\n"
+                                 f"По шкале E-I вы набрали баллов: {db.select_results(message.from_user.id)[-1][2]}\n"
+                                 f"По шкале S-N вы набрали баллов: {db.select_results(message.from_user.id)[-1][3]}\n"
+                                 f"По шкале T-F вы набрали баллов: {db.select_results(message.from_user.id)[-1][4]}\n"
+                                 f"По шкале J-P вы набрали баллов: {db.select_results(message.from_user.id)[-1][5]}\n"
+                                 "Сейчас я пришлю файл с более подробной информацией о вашем типе личности!.."
+                                 )
+        with open(f"./Keirsi/{db.select_results(message.from_user.id)[-1][0]}.pdf", 'rb') as file:
+            await bot.send_document(message.from_user.id, file)
+        await state.finish()
+        await asyncio.sleep(0.2)
+
     elif  message.text.lower() == "нет" or message.text.lower() == "no":
         lst_data_user.clear()
         result_test.clear()
-
         await message.answer(f"Данные пользователя с id {message.from_user.id} остались неизменны.")
-    await state.finish()
+        await state.finish()
+        await asyncio.sleep(0.2)
+
+    else:
+        await message.answer("Пожалуйста, ответьте \"да\" или \"нет\".")
+        await asyncio.sleep(0.2)
 
 
 

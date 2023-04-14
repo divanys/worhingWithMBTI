@@ -72,14 +72,10 @@ class Database:
                                 id_user)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                             ''', (abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user))
-        
-    # def update_result(self, id_results, abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user):
-    #     self.cursor.execute("""
-    #                         UPDATE results SET abbreviation=?,
-    #                                         personality_type=?,
-    #                                         e_i=?,
-    #                                         s_n=?,
-    #                                         t_f=?,
-    #                                         j_p=?,
-    #                                         total=?
-    #                                         WHERE id_user=?""", (id_results, abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user))
+      
+
+
+    def select_results(self, id_iser):
+        self.cursor.execute("SELECT abbreviation, personality_type, e_i, s_n, t_f, j_p, total FROM results WHERE id_user=?", (id_iser,))
+        rows = self.cursor.fetchall()
+        return list(rows)
