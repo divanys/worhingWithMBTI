@@ -1,13 +1,3 @@
-import random
-
-
-results1 = [random.randint(0, 1) for i in range(70)]
-
-# for i in range(10):
-    # row = results[i * 7 : (i + 1) * 7]
-    # print(row)
-
-# print(results)
 def who_are_you(results):
     personality_type = ""
 
@@ -18,7 +8,7 @@ def who_are_you(results):
         e_i_max = results[::7].count(0)
         personality_type += "I"
 
-    ei = (e_i_max - 5) * 2
+    ei = e_i_max
 
     if (results[1::7].count(1) + results[2::7].count(1)) > (results[1::7].count(0) + results[2::7].count(0)):
         s_n_max = results[1::7].count(1) + results[2::7].count(1)
@@ -27,7 +17,7 @@ def who_are_you(results):
         s_n_max = results[1::7].count(0) + results[2::7].count(0)
         personality_type += "N"
 
-    sn = (s_n_max - 10) * 2
+    sn = s_n_max
 
     if (results[3::7].count(1) + results[4::7].count(1)) > (results[3::7].count(0) + results[4::7].count(0)):
         t_f_max = results[3::7].count(1) + results[4::7].count(1)
@@ -36,7 +26,7 @@ def who_are_you(results):
         t_f_max =  results[3::7].count(0) + results[4::7].count(0)
         personality_type += "F"
 
-    tf = (t_f_max - 10) * 2
+    tf = t_f_max
 
     if (results[5::7].count(1) + results[6::7].count(1)) > (results[5::7].count(0) + results[6::7].count(0)):
         j_p_max = results[5::7].count(1) + results[6::7].count(1)
@@ -45,8 +35,7 @@ def who_are_you(results):
         j_p_max = results[5::7].count(0) + results[6::7].count(0)
         personality_type += "P"
 
-    jp = (j_p_max - 10) * 2
+    jp = j_p_max
 
-    return (personality_type, ei + sn + tf + jp)
-# print(results1)
-# print(who_are_you(results1))
+    return [[personality_type, ei + sn + tf + jp], [ei, sn, tf, jp]]
+

@@ -7,6 +7,7 @@ import asyncio
 
 from WhoAreYou import who_are_you
 from create_bot import bot 
+from . import createDB
 
 async def command_start(message : types.Message):
     try:
@@ -26,7 +27,7 @@ async def help_message(message: types.Message):
                         "   /problem - написать о проблеме создателю.\n"
                         "   /test - начало тестирования.")
     
-with open("./QandA/questions.json", "r") as f:
+with open("/home/divan/гетБрейнсИТолькоУдалиЯТебzУдалюСЛицаЗемли/forJobasyncpython/workingWithMBTI/QandA/questions.json", "r") as f:
     questions = json.load(f)
 
 question_index = 0
@@ -61,30 +62,36 @@ async def ready(message: aiogram.types.Message, state: FSMContext):
         await message.answer("Пожалуйста, ответьте \"да\" или \"нет\".")
 
 class Date(StatesGroup):
-    email = State() # waiting for user's readiness
+    surname = State()
     name = State()
+    email = State() 
+    registered = State()
+
+lst_data_user = []
+
 
 async def question(message: aiogram.types.Message, state: FSMContext):
     if message.text in [answer for question in questions for answer in question["answer"]]:
         global question_index
         question_index += 1
-        await asyncio.sleep(0.3)
+        
         # Проверяем, есть ли еще вопросы в списке
         if question_index < len(questions):
+           
             # Получаем следующий вопрос из списка по индексу
             question = questions[question_index]
             await message.answer(text = "Вопрос №" + str(question_index + 1) + ":")
             keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
             for answer in range(len(question["answer"])):
                 keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
-
+            
             await message.answer(question["question"], reply_markup=keyboard)
             await Test.question.set()
-
             result_test_text.append(message.text)
-
+            
         else:
             await message.answer("Тест закончен! Спасибо за участие!", reply_markup=aiogram.types.ReplyKeyboardRemove())
+            lst_data_user.append(message.from_user.id)
             result_test_text.append(message.text)
 
             for answer in range(len(questions)):
@@ -95,11 +102,12 @@ async def question(message: aiogram.types.Message, state: FSMContext):
 
             await state.finish()
 
-            await message.answer("Результаты вашего теста:\n" + str(who_are_you(result_test)) + "\nПожалуйста, введите свою почту.")
-            await Date.email.set()
+            await message.answer("Результаты вашего теста:\n" + str(who_are_you(result_test)) + "\nПожалуйста, введите свою фамилию.")
+            await Date.surname.set()
+            lst_data_user.append(who_are_you(result_test)[0][0])
+            lst_data_user.append(who_are_you(result_test)[0][1])
             question_index = 0
             result_test_text.clear()
-            result_test.clear()
 
     elif message.text.lower() == "stop" or message.text.lower() == "стоп" or message.text.lower() == "прекратить" or message.text.lower() == "end":
             await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
@@ -111,19 +119,61 @@ async def question(message: aiogram.types.Message, state: FSMContext):
     else:
         await message.answer("Пожалуйста, выберите один из вариантов ответа на клавиатуре.")
 
-lst_data_user = []
 
-async def send_email(message: aiogram.types.Message):
+
+async def send_surname(message: aiogram.types.Message):
     lst_data_user.append(message.text)
     await Date.name.set()
-    await message.answer("А теперь отправьте своё имя.")
+    await message.answer("Отправьте своё имя.")
 
 async def send_name(message: aiogram.types.Message, state: FSMContext):
     lst_data_user.append(message.text)
+    await Date.email.set()
+    await message.answer("А теперь отправьте свою почту.")
+
+db = createDB.Database()
+db.create_table_user()
+db.create_table_results()
+
+with open("/home/divan/гетБрейнсИТолькоУдалиЯТебzУдалюСЛицаЗемли/forJobasyncpython/workingWithMBTI/QandA/personalType.json", "r") as f:
+    personal_type = json.load(f)
+
+async def send_email(message: aiogram.types.Message, state: FSMContext):
+    lst_data_user.append(message.text)
     print(lst_data_user)
+    if db.check_user_exists(message.from_user.id):
+        await message.answer("Пользователь уже зарегистрирован.\nЖелаете изменить свои данные?")
+        await Date.registered.set()
+    else:
+        await message.answer("Спасибо за предоставленные данные!")
+        await state.finish()
+        db.insert_user(*lst_data_user)
+        db.insert_results(abbreviation=who_are_you(result_test)[0][0], personality_type=personal_type[f"{who_are_you(result_test)[0][0]}"],
+                          e_i=who_are_you(result_test)[1][0], s_n=who_are_you(result_test)[1][1],
+                          t_f=who_are_you(result_test)[1][2], j_p=who_are_you(result_test)[1][3],
+                          total=who_are_you(result_test)[0][1], id_user=message.from_user.id)
+        lst_data_user.clear()
+        result_test.clear()
+
+
+async def send_registered(message: aiogram.types.Message, state: FSMContext):
+    if (message.text.lower() == "yes" or message.text.lower() == "да"):
+        db.update_user(*lst_data_user)
+        db.insert_results(abbreviation=who_are_you(result_test)[0][0], personality_type=personal_type[f"{who_are_you(result_test)[0][0]}"],
+                          e_i=who_are_you(result_test)[1][0], s_n=who_are_you(result_test)[1][1],
+                          t_f=who_are_you(result_test)[1][2], j_p=who_are_you(result_test)[1][3],
+                          total=who_are_you(result_test)[0][1], id_user=message.from_user.id)
+        lst_data_user.clear()
+        result_test.clear()
+        await message.answer(f"Данные пользователя с id {message.from_user.id} обновлены!")
+    elif  message.text.lower() == "нет" or message.text.lower() == "no":
+        lst_data_user.clear()
+        result_test.clear()
+
+        await message.answer(f"Данные пользователя с id {message.from_user.id} остались неизменны.")
     await state.finish()
-    await message.answer("Спасибо за предоставленные данные!")
-    lst_data_user.clear()
+
+
 
 def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(command_start, commands=['start', 'начать', 'старт', 'начнём'])
@@ -131,6 +181,8 @@ def register_handlers_client(dp: Dispatcher):
     dp.register_message_handler(test, commands=['test', 'тест'], state=None)
     dp.register_message_handler(ready, state = Test.ready)
     dp.register_message_handler(question, state = Test.question)
-    dp.register_message_handler(send_email, state = Date.email)
+    dp.register_message_handler(send_surname, state = Date.surname)
     dp.register_message_handler(send_name, state = Date.name)
+    dp.register_message_handler(send_email, state = Date.email)
+    dp.register_message_handler(send_registered, state = Date.registered)
 
