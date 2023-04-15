@@ -10,6 +10,10 @@ from WhoAreYou import who_are_you
 from create_bot import bot 
 from . import createDB
 
+db = createDB.Database()
+db.create_table_user()
+db.create_table_results()
+
 async def command_start(message : types.Message):
     try:
         await bot.send_message(message.from_user.id, 'Привет 👋\n'
@@ -34,8 +38,7 @@ async def help_message(message: types.Message):
 with open("./QandA/questions.json", "r") as f:
     questions = json.load(f)
 
-question_index = 0
-result_test_text, result_test = [], []
+# result_test_text, result_test = [], []
 class Test(StatesGroup):
     ready = State() # waiting for user's readiness
     question = State() # waiting for user's answer
@@ -46,90 +49,86 @@ async def test(message: aiogram.types.Message):
     await Test.ready.set()
     await asyncio.sleep(0.2)
 
+# class 
 
 async def ready(message: aiogram.types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['question_index'] = 0
+
     if message.text.lower() == "да" or message.text.lower() == "yes":
-        question = questions[question_index]
-        keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-        for answer in range(len(question["answer"])):
-            keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
-
-        await message.answer("Вопрос №1:")
-        await message.answer(question["question"], reply_markup=keyboard)
+        async with state.proxy() as data:
+            question = questions[data['question_index']]
+            keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
+            for answer in range(len(question["answer"])):
+                keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
+            await message.answer("Вопрос №1:")
+            await message.answer(question["question"], reply_markup=keyboard)
+            data['question_index'] += 1
         await Test.question.set()
-
     elif message.text.lower() == "нет" or message.text.lower() == "no":
         await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
         await state.finish()
-
     else:
         await message.answer("Пожалуйста, ответьте \"да\" или \"нет\".")
-    await asyncio.sleep(0.2)
+        await asyncio.sleep(0.2)
 class Date(StatesGroup):
     surname = State()
     name = State()
     email = State() 
     registered = State()
 
-lst_data_user = []
+# lst_data_user = []
 with open("./QandA/personalType.json", "r") as f:
     personal_type = json.load(f)
 
+db.create_table_answers()
 
-async def question(message: aiogram.types.Message, state: FSMContext):
-    if message.text in [answer for question in questions for answer in question["answer"]]:
-        global question_index
-        question_index += 1
-        
-        # Проверяем, есть ли еще вопросы в списке
-        if question_index < len(questions):
-           
-            # Получаем следующий вопрос из списка по индексу
-            question = questions[question_index]
-            await message.answer(text = "Вопрос №" + str(question_index + 1) + ":")
-            keyboard = aiogram.types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for answer in range(len(question["answer"])):
-                keyboard.add(aiogram.types.KeyboardButton(question["answer"][answer]))
-            
-            await message.answer(question["question"], reply_markup=keyboard)
-            await Test.question.set()
-            result_test_text.append(message.text)
-            
+async def question(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        if message.text in [answer for question in questions for answer in question["answer"]]:
+            if data['question_index'] < len(questions):
+                
+                question = questions[data['question_index']]
+                db.insert_answers(message.from_user.id, data['question_index'], 
+                                  questions[data['question_index'] - 1]["question"], message.text)
+                keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                for answer in range(len(question["answer"])):
+                    keyboard.add(types.KeyboardButton(question["answer"][answer]))
+                await message.answer(f"Вопрос №{data['question_index'] + 1}:")
+                await message.answer(question["question"], reply_markup=keyboard)
+                data['question_index'] += 1
+                print(data['question_index'], data['question_index'])
+                
+            else:
+                print(data['question_index'])
+                await state.finish()
+                # db.insert_user_id(message.from_user.id)
+                db.insert_answers(message.from_user.id, data['question_index'], 
+                                  questions[data['question_index'] - 1]["question"], message.text)
+                for answer in range(len(questions)):
+                    if db.select_answers_answer(message.from_user.id, answer + 1)[0][0] == questions[answer]["answer"][0]:
+                        db.insert_answers_o_or_z(message.from_user.id, answer + 1, 1)
+                    else:
+                        db.insert_answers_o_or_z(message.from_user.id, answer + 1, 0)
+                db.insert_user_result(message.from_user.id, who_are_you())
+                await message.answer("Краткие результаты вашего теста:\n"
+                                    "Ваш тип личности: "
+                                    "; \nяркость выражения вашего типа: " + "/70.\n" +
+                                    "Для получения полного результата теста, вам необходимо зарегистрироваться.\nПожалуйста, введите свою фамилию.")
+                await Date.surname.set()
+                lst_data_user.append(who_are_you(result_test)[0][0])
+                lst_data_user.append(who_are_you(result_test)[0][1])
+                result_test_text.clear()
+                await asyncio.sleep(0.2)
+
+        elif message.text.lower() == "stop" or message.text.lower() == "стоп" or message.text.lower() == "прекратить" or message.text.lower() == "end":
+                await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
+                await state.finish()
+                result_test_text.clear()
+                result_test.clear()
         else:
-            await message.answer("Тест закончен! Спасибо за участие!", reply_markup=aiogram.types.ReplyKeyboardRemove())
-            lst_data_user.append(message.from_user.id)
-            result_test_text.append(message.text)
-
-            for answer in range(len(questions)):
-                if result_test_text[answer] == questions[answer]["answer"][0]:
-                    result_test.append(1)
-                else:
-                    result_test.append(0)
-
-            await state.finish()
-
-            await message.answer("Краткие результаты вашего теста:\n"
-                                 "Ваш тип личности: " + str(who_are_you(result_test)[0][0]) +
-                                 "; \nяркость выражения вашего типа: " + str(who_are_you(result_test)[0][1]) + "/70.\n" +
-                                 "Для получения полного результата теста, вам необходимо зарегистрироваться.\nПожалуйста, введите свою фамилию.")
-            await Date.surname.set()
-            lst_data_user.append(who_are_you(result_test)[0][0])
-            lst_data_user.append(who_are_you(result_test)[0][1])
-            question_index = 0
-            result_test_text.clear()
+            await message.answer("Пожалуйста, выберите один из вариантов ответа на клавиатуре.")
         await asyncio.sleep(0.2)
-
-    elif message.text.lower() == "stop" or message.text.lower() == "стоп" or message.text.lower() == "прекратить" or message.text.lower() == "end":
-            await message.answer("Тестирование прервано.", reply_markup=aiogram.types.ReplyKeyboardRemove())
-            await state.finish()
-            question_index = 0
-            result_test_text.clear()
-            result_test.clear()
-            
-    else:
-        await message.answer("Пожалуйста, выберите один из вариантов ответа на клавиатуре.")
-    await asyncio.sleep(0.2)
 
 
 
@@ -145,9 +144,7 @@ async def send_name(message: aiogram.types.Message, state: FSMContext):
     await message.answer("А теперь отправьте свою почту.")
     await asyncio.sleep(0.2)
 
-db = createDB.Database()
-db.create_table_user()
-db.create_table_results()
+
 
 
 
