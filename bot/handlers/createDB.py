@@ -17,71 +17,19 @@ class Database:
                                 name TEXT ,
                                 email TEXT );
                             ''')
-    def insert_user_id(self, id_user):
-        self.cursor.execute('''
-                            INSERT INTO user 
-                                (id_user)
-                            VALUES (?);
-                            ''', (id_user,))
-    
-    def insert_user_result(self, id_user, result):
-        self.cursor.execute('''
-                            INSERT INTO user 
-                                (result)
-                            VALUES (?)
-                            WHERE id_user=?;
-                            ''', (result, id_user,))
         
-    def insert_user_brightness(self, id_user, brightness):
+    def create_table_answers(self):
         self.cursor.execute('''
-                            INSERT INTO user 
-                                (brightness)
-                            VALUES (?)
-                            WHERE id_user=?;
-                            ''', (brightness, id_user,))
-    
-    def insert_user_surname(self, id_user, surname):
-        self.cursor.execute('''
-                            INSERT INTO user 
-                                (surname)
-                            VALUES (?)
-                            WHERE id_user=?;
-                            ''', (surname, id_user,))
+                            CREATE TABLE IF NOT EXISTS answers 
+                            (id_answers INTEGER PRIMARY KEY AUTOINCREMENT,
+                            id_user INTEGER,
+                            num_question INTEGER NOT NULL,
+                            question TEXT NOT NULL,
+                            answer TEXT NOT NULL,
+                            o_or_z INTEGER, 
+                            FOREIGN KEY (id_user) REFERENCES user(id_user));
+                            ''')
         
-    def insert_user_name(self, id_user, name):
-        self.cursor.execute('''
-                            INSERT INTO user 
-                                (name)
-                            VALUES (?)
-                            WHERE id_user=?;
-                            ''', (name, id_user,))
-        
-    def insert_user_email(self, id_user, email):
-        self.cursor.execute('''
-                            INSERT INTO user 
-                                (email)
-                            VALUES (?)
-                            WHERE id_user=?;
-                            ''', (email, id_user,))
-    
-
-    def check_user_exists(self, id_user):
-        self.cursor.execute("SELECT * FROM user WHERE id_user=?", (id_user,))
-        result = self.cursor.fetchone()
-        if result:
-            return True
-        else:
-            return False
-        
-    def update_user(self, id_user, result, brightness, surname, name, email):
-        self.cursor.execute("""
-                            UPDATE user SET result=?,
-                                            brightness=?,
-                                            surname=?,
-                                            name=?,
-                                            email=?
-                                            WHERE id_user=?""", (result, brightness, surname, name, email, id_user,))
-
     def create_table_results(self):
         self.cursor.execute('''
                             CREATE TABLE IF NOT EXISTS results
@@ -96,10 +44,86 @@ class Database:
                                 id_user INTEGER,
                                 FOREIGN KEY (id_user) REFERENCES user(id_user));
                             ''')
+    def insert_user_id(self, id_user):
+        self.cursor.execute('''
+                            INSERT INTO user
+                            (id_user)
+                            VALUES (?);                           
+                            ''', (id_user,))
+    
+    def update_user_result(self, id_user, result):
+        self.cursor.execute('''
+                            UPDATE user 
+                            SET result=?
+                            WHERE id_user=?;
+                            ''', (result, id_user,))
+    def select_user_result(self, id_user):
+        self.cursor.execute('''
+                            SELECT result
+                            FROM user
+                            WHERE id_user=?;
+                            ''', (id_user, ))
+        result = self.cursor.fetchone()
+        return result[0]
+    
+    def update_user_brightness(self, id_user, brightness):
+        self.cursor.execute('''
+                            UPDATE user 
+                            SET brightness=?
+                            WHERE id_user=?;
+                            ''', (brightness, id_user,))
+        
+    def select_user_brightness(self, id_user):
+        self.cursor.execute('''
+                            SELECT brightness
+                            FROM user
+                            WHERE id_user=?;
+                            ''', (id_user, ))
+        result = self.cursor.fetchone()
+        return result[0]
+    
+    def update_user_surname(self, id_user, surname):
+        self.cursor.execute('''
+                            UPDATE user 
+                            SET surname=?
+                            WHERE id_user=?;
+                            ''', (surname, id_user,))
+        
+    def update_user_name(self, id_user, name):
+        self.cursor.execute('''
+                            UPDATE user 
+                            SET name=?
+                            WHERE id_user=?;
+                            ''', (name, id_user,))
+        
+    def update_user_email(self, id_user, email):
+        self.cursor.execute('''
+                            UPDATE user 
+                            SET email=?
+                            WHERE id_user=?;
+                            ''', (email, id_user,))
+    
+
+    def check_user_exists(self, id_user, email):
+        self.cursor.execute("SELECT * FROM user WHERE id_user=? AND email=?", (id_user, email,))
+        result = self.cursor.fetchone()
+        if result:
+            return True
+        else:
+            return False
+        
+    def update_user(self, id_user, result, brightness, surname, name, email):
+        self.cursor.execute("""
+                            UPDATE user SET result=?,
+                                            brightness=?,
+                                            surname=?,
+                                            name=?,
+                                            email=?
+                                            WHERE id_user=?""", (result, brightness, surname, name, email, id_user,))
         
     def insert_results(self, abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user):
         self.cursor.execute('''
-                            INSERT INTO results 
+                            UPDATE results 
                                 (abbreviation,
                                 personality_type,
                                 e_i,
@@ -111,26 +135,48 @@ class Database:
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
                             ''', (abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user))
       
+    def update_results(self, abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user):
+        self.cursor.execute('''
+                            UPDATE results 
+                            SET abbreviation = ?,
+                                personality_type  = ?,
+                                e_i = ?,
+                                s_n = ?,
+                                t_f = ?,
+                                j_p = ?,
+                                total = ?
+                            WHERE id_user = ?;
+                            ''', (abbreviation, personality_type, e_i, s_n, t_f, j_p, total, id_user))
 
+    def select_answers_answer(self, id_user, num_question):
+        self.cursor.execute('''
+                            SELECT answer
+                            FROM answers
+                            WHERE id_user=? AND num_question=?; 
+                            ''', (id_user, num_question,))
+        row = self.cursor.fetchall()
+        return row
 
+    def select_answers_o_or_z(self, id_user):
+        self.cursor.execute('''SELECT o_or_z FROM answers WHERE id_user=?;''', (id_user,))
+        rows = self.cursor.fetchall()
+        return [i[0] for i in rows]
+        
+    def select_answers(self, id_user):
+        self.cursor.execute("SELECT * FROM answers WHERE id_user=?", (id_user,))
+        rows = self.cursor.fetchall()
+        return rows
+    
+    def select_user_email(self, id_user):
+        self.cursor.execute("SELECT email FROM user WHERE id_user=?", (id_user,))
+        rows = self.cursor.fetchall()
+        return rows
+    
     def select_results(self, id_user):
         self.cursor.execute("SELECT abbreviation, personality_type, e_i, s_n, t_f, j_p, total FROM results WHERE id_user=?", (id_user,))
         rows = self.cursor.fetchall()
         return list(rows)
     
-
-    def create_table_answers(self):
-        self.cursor.execute('''
-                            CREATE TABLE IF NOT EXISTS answers 
-                            (id_answers INTEGER PRIMARY KEY AUTOINCREMENT,
-                            id_user INTEGER,
-                            num_question INTEGER NOT NULL,
-                            question TEXT NOT NULL,
-                            answer TEXT NOT NULL,
-                            o_or_z INTEGER, 
-                            FOREIGN KEY (id_user) REFERENCES user(id_user));
-                            ''')
-        
     def insert_answers(self, id_user, num_question, question, answer):
         self.cursor.execute('''
                             INSERT INTO answers 
@@ -148,18 +194,10 @@ class Database:
                             WHERE id_user=? AND num_question=?;
                             ''', (o_or_z, id_user, num_question,))
         
-    def select_answers_answer(self, id_user, num_question):
-        self.cursor.execute('''
-                            SELECT answer
-                            FROM answers
-                            WHERE id_user=? AND num_question=?; 
-                            ''', (id_user, num_question,))
-        row = self.cursor.fetchall()
-        return row
-
-    def select_answers(self, id_user):
-        self.cursor.execute("SELECT * FROM answers WHERE id_user=?", (id_user,))
-        rows = self.cursor.fetchall()
-        return rows
     
-    # def select_
+    
+    def delete_answers(self, id_user):
+        self.cursor.execute('''
+                            DELETE FROM answers WHERE id_user=?;
+                            ''', (id_user, ))
+    
